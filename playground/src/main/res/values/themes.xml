@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="playground_background">#050B18</color>
+
+    <style name="Theme.Playground" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/playground_background</item>
+        <item name="android:statusBarColor">@color/playground_background</item>
+        <item name="android:navigationBarColor">@color/playground_background</item>
+    </style>
+</resources>

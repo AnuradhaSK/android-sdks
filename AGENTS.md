@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Kotlin Android library providing the ThunderID authentication SDK (`dev.thunderid.android`) and a Jetpack Compose component library (`dev.thunderid.compose`). The `samples/quickstart` directory contains a standalone demo app.
+Kotlin Android library providing the ThunderID authentication SDK (`dev.thunderid.android`) and a Jetpack Compose component library (`dev.thunderid.compose`). The Quickstart demo app lives in the samples repository at [`quickstarts/android`](https://github.com/thunder-id/samples/tree/main/quickstarts/android). The `playground/` directory holds a development app that exercises every SDK capability against the SDK built from source.
 
 ## SDK development specification
 
@@ -45,7 +45,14 @@ The SDK is white-labelable: a consuming app can override the brand/vendor namesp
 
 # Run lint and ktlint checks (must pass before any PR)
 ./gradlew lint ktlintCheck
+
+# Lint and build the playground against the local SDK (see playground/README.md)
+cd playground && ./gradlew ktlintCheck assembleDebug
 ```
+
+When you add or change an SDK capability or Compose component, update the playground's checks
+(`playground/src/main/kotlin/dev/thunderid/playground/Checks.kt`) or component stories
+(`Stories.kt`) to cover it.
 
 ## Ktlint compliance (required)
 
@@ -91,7 +98,8 @@ src/main/kotlin/dev/thunderid/
         user/           User, UserDropdown, UserProfile
     i18n/               Localization (ThunderI18n, DefaultStrings)
 src/test/kotlin/        Unit tests
-samples/quickstart/     Demo app (not part of the SDK)
+playground/             Development app (checks, component explorer, session inspector); builds the SDK via includeBuild
+tests/e2e/              Maestro E2E suite (fetches the Quickstart sample from thunder-id/samples)
 build.gradle.kts        SDK library build config
 settings.gradle.kts     Project settings
 ```
@@ -100,7 +108,7 @@ settings.gradle.kts     Project settings
 
 - **Layer 1–2** (`dev.thunderid.android`): platform SDK — HTTP, token management, auth flows, PKCE, storage.
 - **Layer 3** (`dev.thunderid.compose`): Compose UI wrappers around the platform SDK.
-- **Layer 4** (`samples/quickstart`): standalone demo app that depends on the SDK via `includeBuild`.
+- **Layer 4** ([`quickstarts/android`](https://github.com/thunder-id/samples/tree/main/quickstarts/android) in thunder-id/samples): standalone demo app that depends on the published SDK from JitPack. The E2E suite and the PR builder fetch it with `tests/e2e/scripts/prepare-sample.sh`, which points it at the local checkout via `includeBuild`.
 
 Every Compose component ships in two variants:
 - **Styled** — opinionated Material 3 defaults (e.g. `SignInButton`).

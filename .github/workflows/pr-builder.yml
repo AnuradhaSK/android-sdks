@@ -140,19 +140,53 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # The sample lives in thunder-id/samples; fetch it and build it against this checkout.
+      - name: 📥 Fetch Quickstart Sample
+        run: tests/e2e/scripts/prepare-sample.sh
+
       - name: 🗄️ Cache Gradle Packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-sample-${{ hashFiles('samples/quickstart/**/*.gradle.kts', 'samples/quickstart/**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-sample-${{ hashFiles('*.gradle.kts', 'tests/e2e/.samples/quickstarts/android/**/*.gradle.kts', 'tests/e2e/.samples/quickstarts/android/**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-sample-
 
       - name: 🔨 Build Quickstart Sample
-        working-directory: samples/quickstart
+        working-directory: tests/e2e/.samples/quickstarts/android
         run: ./gradlew build -x test
+
+  build-playground:
+    name: 🛠️ Build Playground
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🗄️ Cache Gradle Packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-playground-${{ hashFiles('*.gradle.kts', 'playground/*.gradle.kts', 'playground/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-playground-
+
+      # The playground builds the SDK from this checkout through includeBuild("..").
+      - name: 🔨 Lint and Build Playground
+        working-directory: playground
+        run: ./gradlew ktlintCheck assembleDebug
 
   e2e:
     name: 🎭 E2E Tests

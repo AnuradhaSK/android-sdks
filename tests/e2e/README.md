@@ -4,6 +4,22 @@ Maestro flows that drive the Quickstart sample through real authentication again
 ThunderID server on an Android emulator. The flows live in [`flows/`](./flows); the
 scripts alongside them get a server into the right state to run against.
 
+The sample itself lives in the samples repository at
+[`quickstarts/android`](https://github.com/thunder-id/samples/tree/main/quickstarts/android).
+[`scripts/prepare-sample.sh`](./scripts/prepare-sample.sh) (or `prepare-sample.ps1`) fetches it
+into `.samples/` and adds an `includeBuild` to its `settings.gradle.kts` that substitutes this SDK
+checkout for the published `com.github.thunder-id:android-sdks` dependency, so the suite always
+tests the code in this repository. The PR builder builds the sample the same way.
+
+| Variable | Effect |
+|---|---|
+| `THUNDERID_SAMPLES_DIR` | Copy the sample from an existing local samples checkout instead of cloning |
+| `THUNDERID_SAMPLES_REPO` | Samples repository to clone (default `https://github.com/thunder-id/samples.git`) |
+| `THUNDERID_SAMPLES_REF` | Branch, tag or commit to clone (default `main`) |
+
+Use `THUNDERID_SAMPLES_DIR` or `THUNDERID_SAMPLES_REF` to test an SDK change together with an
+unmerged change to the sample.
+
 ## Running locally
 
 ```bash
@@ -36,8 +52,8 @@ restarted, and provisioning re-applies cleanly over an existing application and 
 | Test user | `e2e_mobile_user` / `TestPassword@123` |
 
 The application is declared in
-[`samples/quickstart/thunderid-config/thunderid-config.yaml`](../../samples/quickstart/thunderid-config/thunderid-config.yaml),
-alongside the sample it configures. The sign-up flow
+[`quickstarts/android/thunderid-config/thunderid-config.yaml`](https://github.com/thunder-id/samples/blob/main/quickstarts/android/thunderid-config/thunderid-config.yaml)
+in the samples repository, alongside the sample it configures. The sign-up flow
 registers an additional throwaway user per run, named `e2e_signup_<timestamp>`.
 
 ## Things worth knowing

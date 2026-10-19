@@ -1,0 +1,19 @@
+# Copy to config.properties (gitignored) and fill in the values for your ThunderID server.
+# Every key can also be supplied as an environment variable of the same name.
+
+# ThunderID server. The Android emulator reaches the host machine's localhost at 10.0.2.2.
+THUNDERID_BASE_URL=https://10.0.2.2:8090
+
+# Application ID, used by the app-native flow (SignIn, SignUp, flow execution).
+THUNDERID_APPLICATION_ID=your-application-id
+
+# OAuth2 client ID, used by the system browser (Custom Tabs) sign-in and token refresh.
+THUNDERID_CLIENT_ID=your-client-id
+
+# Redirect URIs. Register the sign-in redirect URI on the application in ThunderID.
+# The URI scheme is wired into the manifest, so a custom scheme here is all you need to change.
+THUNDERID_AFTER_SIGN_IN_URL=dev.thunderid.playground://callback
+THUNDERID_AFTER_SIGN_OUT_URL=dev.thunderid.playground://signed-out
+
+# Space separated OAuth2 scopes.
+THUNDERID_SCOPES=openid profile email
