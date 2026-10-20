@@ -87,13 +87,24 @@ jobs:
         uses: reactivecircus/android-emulator-runner@62dbb605bba737720e10b196cb4220d374026a6d # v2
         env:
           THUNDERID_VERSION: ${{ inputs.thunderid-version }}
+          # Authenticates run-e2e.sh's latest-release lookup. Unauthenticated, it shares the
+          # runner IP's 60-an-hour GitHub API budget and fails before the suite starts.
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           api-level: 34
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          # The script starts at the repository root.
-          script: cd tests/e2e && ./run-e2e.sh
+          # The action defaults to 2 cores, on a 4-vCPU runner that is also hosting the ThunderID
+          # server. Starved of CPU, the emulator's own Pixel Launcher stops responding and its
+          # "isn't responding" dialog covers the app under test.
+          cores: 4
+          # The script starts at the repository root. hide_error_dialogs has the system kill a
+          # process that stops responding instead of covering the screen with a dialog; a killed
+          # launcher restarts on its own, and a hung sample still fails the flow.
+          script: |
+            adb shell settings put global hide_error_dialogs 1
+            cd tests/e2e && ./run-e2e.sh
 
       - name: ✅ Check E2E Result
         # Always run this, even if the step above reported failure/cancelled (see its comment) -

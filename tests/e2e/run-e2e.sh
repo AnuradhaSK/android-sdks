@@ -22,6 +22,7 @@
 #   E2E_USERNAME       Test user to create (default e2e_mobile_user)
 #   E2E_PASSWORD       Test user password (default TestPassword@123)
 #   INSTALL_DIR        Where to unpack the distribution (default ./.thunderid-server)
+#   GITHUB_TOKEN       Optional. Authenticates the latest-release lookup against the API rate limit
 #
 # Why not `npx thunderid`? That wrapper renders an interactive TUI and aborts with
 # "bubbletea: could not open TTY" when stdout is not a terminal, which is always the case on a CI
@@ -69,7 +70,7 @@ for arg in "$@"; do
         --skip-server) do_server=false ;;
         --skip-build) do_build=false ;;
         --skip-test) do_test=false ;;
-        -h | --help) sed -n '2,27p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) maestro_args+=("$arg") ;;
     esac
 done
@@ -107,7 +108,15 @@ start_server() {
     local version="${THUNDERID_VERSION:-}"
     if [ -z "$version" ]; then
         echo "==> Resolving the latest ThunderID release"
-        version=$(curl -sSL https://api.github.com/repos/thunder-id/thunderid/releases/latest |
+        # Unauthenticated GitHub API calls share a budget of 60 an hour per IP address, and hosted
+        # runners share their outbound IPs, so on CI that budget is regularly spent before this
+        # call is made. Authenticate when a token is available; a local run without one still works.
+        local api_auth=""
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+            api_auth="Authorization: Bearer $GITHUB_TOKEN"
+        fi
+        version=$(curl -sSL ${api_auth:+-H "$api_auth"} \
+            https://api.github.com/repos/thunder-id/thunderid/releases/latest |
             jq -r '.tag_name // empty' | sed 's/^v//')
         if [ -z "$version" ]; then
             echo "ERROR: could not resolve the latest release (rate limited?). Set THUNDERID_VERSION." >&2

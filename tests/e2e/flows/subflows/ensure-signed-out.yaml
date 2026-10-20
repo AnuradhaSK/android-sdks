@@ -57,7 +57,24 @@ appId: dev.thunderid.Quickstart
 
       # A bare assertVisible relies on Maestro's short default lookup timeout, which is not
       # always enough for the landing screen to render on a loaded CI emulator/simulator - wait
-      # explicitly.
+      # explicitly. Optional, because a landing screen that never arrives is handled just below.
+      - extendedWaitUntil:
+          visible: "Sign in"
+          timeout: 15000
+          optional: true
+
+      # `launchApp: clearState: true` can lose a race with its own cleanup on a slow emulator.
+      # Clearing the data removes the app's task, and when that removal times out the system kills
+      # the package's process - by then the freshly launched one. Device logs from a failed run
+      # show "Destroy timeout of remove-task" followed by "Killing <new pid> ... remove task" a
+      # fraction of a second after launch, leaving a blank window that waiting never fixes.
+      # Relaunching recovers it. The data is already cleared, so this launch does not clear it
+      # again and cannot trigger the same race.
+      - runFlow:
+          when:
+            notVisible: "Sign in"
+          commands:
+            - launchApp
       - extendedWaitUntil:
           visible: "Sign in"
           timeout: 15000
