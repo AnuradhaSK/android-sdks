@@ -23,6 +23,9 @@
 #   E2E_PASSWORD       Test user password (default TestPassword@123)
 #   INSTALL_DIR        Where to unpack the distribution (default ./.thunderid-server)
 #   GITHUB_TOKEN       Optional. Authenticates the latest-release lookup against the API rate limit
+#   THUNDERID_SAMPLES_DIR   Local samples checkout to take the sample from (default: clone it)
+#   THUNDERID_SAMPLES_REPO  Samples repository to clone (default https://github.com/thunder-id/samples.git)
+#   THUNDERID_SAMPLES_REF   Samples branch, tag or commit to clone (default main)
 #
 # Why not `npx thunderid`? That wrapper renders an interactive TUI and aborts with
 # "bubbletea: could not open TTY" when stdout is not a terminal, which is always the case on a CI
@@ -55,9 +58,6 @@ E2E_USER="${E2E_USERNAME:-e2e_mobile_user}"
 E2E_PASS="${E2E_PASSWORD:-TestPassword@123}"
 INSTALL_DIR="${INSTALL_DIR:-$SCRIPT_DIR/.thunderid-server}"
 
-# The sample owns its own application config, not the test script.
-CONFIG_FILE="$SCRIPT_DIR/../../samples/quickstart/thunderid-config/thunderid-config.yaml"
-
 # Must match the `id` in $CONFIG_FILE and the application ID the sample is built with.
 APP_ID="019e5b10-1001-7a2b-9c3d-4e5f60718293"
 
@@ -70,7 +70,7 @@ for arg in "$@"; do
         --skip-server) do_server=false ;;
         --skip-build) do_build=false ;;
         --skip-test) do_test=false ;;
-        -h | --help) sed -n '2,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) maestro_args+=("$arg") ;;
     esac
 done
@@ -78,6 +78,16 @@ done
 for tool in curl jq openssl; do
     command -v "$tool" >/dev/null 2>&1 || { echo "ERROR: $tool is required but not installed." >&2; exit 1; }
 done
+
+# The sample lives in the ThunderID samples repository. Fetch it and wire it to this SDK checkout
+# (see scripts/prepare-sample.sh for THUNDERID_SAMPLES_DIR/_REPO/_REF).
+SAMPLE_DIR=""
+if $do_server || $do_build; then
+    SAMPLE_DIR="$("$SCRIPT_DIR/scripts/prepare-sample.sh")"
+fi
+
+# The sample owns its own application config, not the test script.
+CONFIG_FILE="$SAMPLE_DIR/thunderid-config/thunderid-config.yaml"
 
 # ---------------------------------------------------------------------------------------------
 # Start
@@ -337,7 +347,7 @@ provision() {
 # Build and install the sample
 # ---------------------------------------------------------------------------------------------
 build_sample() {
-    local sample_dir="$SCRIPT_DIR/../../samples/quickstart"
+    local sample_dir="$SAMPLE_DIR"
 
     echo "==> Configuring the sample"
     # 10.0.2.2 is the emulator's alias for the host loopback, where the server is listening.

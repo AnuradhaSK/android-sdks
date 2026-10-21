@@ -36,6 +36,9 @@
       E2E_USERNAME       Test user to create (default e2e_mobile_user)
       E2E_PASSWORD       Test user password (default TestPassword@123)
       INSTALL_DIR        Where to unpack the distribution (default .\.thunderid-server)
+      THUNDERID_SAMPLES_DIR   Local samples checkout to take the sample from (default: clone it)
+      THUNDERID_SAMPLES_REPO  Samples repository to clone (default https://github.com/thunder-id/samples.git)
+      THUNDERID_SAMPLES_REF   Samples branch, tag or commit to clone (default main)
 
     Requires PowerShell 7 or later. The server presents a self-signed certificate on localhost,
     which every request here opts out of validating with -SkipCertificateCheck; that switch does
@@ -72,9 +75,6 @@ $AdminPass  = Get-EnvOrDefault 'ADMIN_PASSWORD' 'admin'
 $E2eUser    = Get-EnvOrDefault 'E2E_USERNAME' 'e2e_mobile_user'
 $E2ePass    = Get-EnvOrDefault 'E2E_PASSWORD' 'TestPassword@123'
 $InstallDir = Get-EnvOrDefault 'INSTALL_DIR' (Join-Path $ScriptDir '.thunderid-server')
-
-# The sample owns its own application config, not the test script.
-$ConfigFile = Join-Path $ScriptDir '../../samples/quickstart/thunderid-config/thunderid-config.yaml'
 
 # Must match the `id` in $ConfigFile and the application ID the sample is built with.
 $AppId = '019e5b10-1001-7a2b-9c3d-4e5f60718293'
@@ -301,8 +301,6 @@ function Invoke-Provision {
 # Build and install the sample
 # -------------------------------------------------------------------------------------------
 function Build-Sample {
-    $sampleDir = Join-Path $ScriptDir '..\..\samples\quickstart' | Resolve-Path
-
     Write-Host '==> Configuring the sample'
     # 10.0.2.2 is the emulator's alias for the host loopback, where the server is listening.
     # The debug build sets allowInsecureConnections, which is what lets the app accept the
@@ -312,10 +310,10 @@ function Build-Sample {
         "THUNDERID_APPLICATION_ID=$AppId"
         'THUNDERID_ATTESTATION_ENABLED=false'
         'THUNDERID_CLOUD_PROJECT_NUMBER='
-    ) | Set-Content -Path (Join-Path $sampleDir 'config.properties') -Encoding utf8
+    ) | Set-Content -Path (Join-Path $SampleDir 'config.properties') -Encoding utf8
 
     Write-Host '==> Building and installing the sample'
-    Push-Location $sampleDir
+    Push-Location $SampleDir
     try {
         & .\gradlew.bat installDebug
         if ($LASTEXITCODE -ne 0) { throw "gradlew installDebug failed with exit code $LASTEXITCODE." }
@@ -346,6 +344,14 @@ function Invoke-Flows {
     } finally {
         Pop-Location
     }
+}
+
+# The sample lives in the ThunderID samples repository. Fetch it and wire it to this SDK
+# checkout (see scripts\prepare-sample.ps1 for THUNDERID_SAMPLES_DIR/_REPO/_REF).
+if (-not $SkipServer -or -not $SkipBuild) {
+    $SampleDir = & (Join-Path $ScriptDir 'scripts\prepare-sample.ps1') | Select-Object -Last 1
+    # The sample owns its own application config, not the test script.
+    $ConfigFile = Join-Path $SampleDir 'thunderid-config/thunderid-config.yaml'
 }
 
 if (-not $SkipServer) {

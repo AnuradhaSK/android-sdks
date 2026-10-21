@@ -4,6 +4,7 @@ Android SDK for ThunderID. Provides authentication and user management for nativ
 
 - [Quickstart](https://thunderid.dev/docs/next/getting-started/connect-your-application/android/)
 - [API reference](https://thunderid.dev/docs/next/sdks/android/overview/)
+- [Sample app](https://github.com/thunder-id/samples/tree/main/quickstarts/android)
 
 ## Installation
 
@@ -37,6 +38,12 @@ dependencies {
 
 > [!NOTE]
 > Replace `<latest-release-tag>` with the [latest release tag](https://github.com/thunder-id/android-sdks/releases) of the `android-sdks` repository.
+
+## Playground
+
+The [`playground`](playground) directory contains a Jetpack Compose app that builds this SDK from source and exercises
+every capability: capability checks, a component explorer, and a session inspector. See the
+[playground README](playground/README.md) to run it against a local ThunderID server.
 
 ## Contributing
 

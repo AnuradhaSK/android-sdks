@@ -42,3 +42,6 @@ google-services.json
 
 # Maestro JUnit report from the E2E suite.
 tests/e2e/report.xml
+
+# Samples repository checkout fetched by tests/e2e/scripts/prepare-sample.sh
+tests/e2e/.samples/
