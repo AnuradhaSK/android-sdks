@@ -20,8 +20,8 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 /** Covers [ThunderIDState.getUserSchema]'s caching: the schema shared by every component that
- * needs it (e.g. [dev.thunderid.compose.components.presentation.user.UserProfile] and
- * [dev.thunderid.compose.components.presentation.user.ChangeCredential]) should be fetched once,
+ * needs it (e.g. [dev.thunderid.compose.components.account.UserProfile] and
+ * [dev.thunderid.compose.components.account.ChangeCredential]) should be fetched once,
  * not once per component. */
 class ThunderIDStateTest {
     private fun newState(

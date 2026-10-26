@@ -1,0 +1,17 @@
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package dev.thunderid.compose.components.auth.guards
+
+import androidx.compose.runtime.Composable
+import dev.thunderid.compose.LocalThunderID
+
+/** Renders [content] only when the user is NOT authenticated (spec §8.4 Guards). */
+@Composable
+fun SignedOut(
+    fallback: @Composable () -> Unit = {},
+    content: @Composable () -> Unit,
+) {
+    val state = LocalThunderID.current
+    if (!state.isSignedIn) content() else fallback()
+}

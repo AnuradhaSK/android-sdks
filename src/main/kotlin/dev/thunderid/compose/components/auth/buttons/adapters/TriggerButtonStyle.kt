@@ -1,0 +1,62 @@
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package dev.thunderid.compose.components.auth.buttons.adapters
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+/**
+ * Shared outlined-button chrome for `eventType: TRIGGER` (federated login) actions: an icon
+ * slot, a label, and a rounded-rect stroke — matching the "Continue with X" buttons rendered
+ * below a SignIn form's "Or" divider.
+ */
+@Composable
+fun TriggerButtonStyle(
+    label: String,
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    // Disables the button without showing a spinner, e.g. while a sibling button's
+    // submission is in flight.
+    disabled: Boolean = false,
+    icon: (@Composable () -> Unit)? = null,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = !isLoading && !disabled,
+        modifier = modifier.fillMaxWidth().height(48.dp),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, LocalContentColor.current.copy(alpha = 0.4f)),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
+        } else {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                icon?.invoke()
+                Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+    }
+}

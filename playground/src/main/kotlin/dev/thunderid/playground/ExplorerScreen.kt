@@ -60,21 +60,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.thunderid.android.User
 import dev.thunderid.compose.LocalThunderID
-import dev.thunderid.compose.components.actions.BaseSignInButton
-import dev.thunderid.compose.components.actions.BaseSignOutButton
-import dev.thunderid.compose.components.actions.BaseSignUpButton
-import dev.thunderid.compose.components.actions.adapters.GitHubButton
-import dev.thunderid.compose.components.actions.adapters.GoogleButton
-import dev.thunderid.compose.components.actions.adapters.OutlinedTriggerButton
-import dev.thunderid.compose.components.actions.adapters.PasskeyButton
-import dev.thunderid.compose.components.guards.SignedIn
-import dev.thunderid.compose.components.guards.SignedOut
-import dev.thunderid.compose.components.presentation.auth.FlowErrorBanner
-import dev.thunderid.compose.components.presentation.auth.SignIn
-import dev.thunderid.compose.components.presentation.organization.BaseLanguageSwitcher
-import dev.thunderid.compose.components.presentation.organization.LanguageSwitcher
-import dev.thunderid.compose.components.presentation.user.BaseUserAvatar
-import dev.thunderid.compose.components.presentation.user.UserAvatar
+import dev.thunderid.compose.components.account.BaseUserAvatar
+import dev.thunderid.compose.components.account.UserAvatar
+import dev.thunderid.compose.components.auth.SignIn
+import dev.thunderid.compose.components.auth.buttons.BaseSignInButton
+import dev.thunderid.compose.components.auth.buttons.BaseSignOutButton
+import dev.thunderid.compose.components.auth.buttons.BaseSignUpButton
+import dev.thunderid.compose.components.auth.buttons.adapters.GitHubButton
+import dev.thunderid.compose.components.auth.buttons.adapters.GoogleButton
+import dev.thunderid.compose.components.auth.buttons.adapters.OutlinedTriggerButton
+import dev.thunderid.compose.components.auth.buttons.adapters.PasskeyButton
+import dev.thunderid.compose.components.auth.flow.FlowErrorBanner
+import dev.thunderid.compose.components.auth.guards.SignedIn
+import dev.thunderid.compose.components.auth.guards.SignedOut
+import dev.thunderid.compose.components.common.BaseLanguageSwitcher
+import dev.thunderid.compose.components.common.LanguageSwitcher
 
 @Composable
 fun ExplorerScreen() {
@@ -111,7 +111,7 @@ fun ExplorerScreen() {
                 }
             }
         }
-        Preview(dark = dark, taps = taps) {
+        Preview(dark = dark, taps = taps, tall = isAdminStory(spec.id) || isCustomRenderStory(spec.id)) {
             StoryPreview(spec.id, storyId, props) { taps++ }
         }
         Column(
@@ -243,6 +243,7 @@ private fun StoryChip(
 private fun Preview(
     dark: Boolean,
     taps: Int,
+    tall: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val background = if (dark) Color(0xFF071022) else Color(0xFFEEF1F6)
@@ -252,7 +253,7 @@ private fun Preview(
             Modifier
                 .padding(horizontal = 16.dp)
                 .fillMaxWidth()
-                .height(250.dp)
+                .height(if (tall) 340.dp else 250.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(background)
                 .drawBehind {
@@ -389,6 +390,14 @@ private fun StoryPreview(
             } else {
                 SignedIn(fallback = { Text(fallback, color = textColor) }) { Text("Signed-in content", color = textColor) }
             }
+        }
+
+        in AdminComponentSpecs.map { it.id } -> {
+            AdminStoryPreview(componentId, storyId, props, onTap)
+        }
+
+        in CustomRenderSpecs.map { it.id } -> {
+            CustomRenderPreview(componentId, storyId, props, onTap)
         }
 
         "signin" -> {

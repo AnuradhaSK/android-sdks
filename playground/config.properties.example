@@ -21,3 +21,13 @@ THUNDERID_SCOPES=openid profile email
 # Optional. Base URL of a backend that signs the app in and keeps the tokens (endpoints.backend).
 # When set, sign-in runs there and the app holds only a session handle. Leave empty to sign in directly.
 THUNDERID_BACKEND_URL=
+
+# Optional: per-collection management endpoint overrides (ThunderIDConfig.endpoints). Each is a full
+# collection URL. Leave them blank to use {THUNDERID_BASE_URL}/{collection}.
+THUNDERID_ENDPOINT_APPLICATIONS=
+THUNDERID_ENDPOINT_USERS=
+THUNDERID_ENDPOINT_USER_TYPES=
+THUNDERID_ENDPOINT_AGENTS=
+THUNDERID_ENDPOINT_AGENT_TYPES=
+THUNDERID_ENDPOINT_GROUPS=
+THUNDERID_ENDPOINT_ROLES=

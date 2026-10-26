@@ -47,8 +47,8 @@ class ThunderIDState(
         internal set
 
     /** Cached `GET /users/me/meta` result, shared by every mounted component that needs the
-     * user type schema (e.g. [dev.thunderid.compose.components.presentation.user.UserProfile]
-     * and [dev.thunderid.compose.components.presentation.user.ChangeCredential]), so a screen
+     * user type schema (e.g. [dev.thunderid.compose.components.account.UserProfile]
+     * and [dev.thunderid.compose.components.account.ChangeCredential]), so a screen
      * that mounts several of them issues one request instead of one per component. */
     var userSchema by mutableStateOf<Map<String, AttributeSchema>?>(null)
         internal set
