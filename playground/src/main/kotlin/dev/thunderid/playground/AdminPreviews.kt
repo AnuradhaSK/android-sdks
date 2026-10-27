@@ -22,9 +22,15 @@ import dev.thunderid.compose.LocalThunderID
 import dev.thunderid.compose.components.admin.AgentCreate
 import dev.thunderid.compose.components.admin.AgentDetails
 import dev.thunderid.compose.components.admin.AgentList
+import dev.thunderid.compose.components.admin.ApplicationCreate
+import dev.thunderid.compose.components.admin.ApplicationDetails
+import dev.thunderid.compose.components.admin.ApplicationList
 import dev.thunderid.compose.components.admin.BaseAgentCreate
 import dev.thunderid.compose.components.admin.BaseAgentDetails
 import dev.thunderid.compose.components.admin.BaseAgentList
+import dev.thunderid.compose.components.admin.BaseApplicationCreate
+import dev.thunderid.compose.components.admin.BaseApplicationDetails
+import dev.thunderid.compose.components.admin.BaseApplicationList
 import dev.thunderid.compose.components.admin.BaseGroupCreate
 import dev.thunderid.compose.components.admin.BaseGroupList
 import dev.thunderid.compose.components.admin.BaseGroupMembers
@@ -493,8 +499,148 @@ fun AdminStoryPreview(
                     )
                 }
             }
+
+            "applicationList" -> {
+                if (live) {
+                    ApplicationList(
+                        modifier = modifier,
+                        limit = limit,
+                        onSelect = if (selectable) ({ select(it.id) { id -> ManagementFixtures.applicationId = id } }) else null,
+                        selectedApplicationId = selected,
+                        title = title,
+                    )
+                } else {
+                    val rows = if (empty) emptyList() else AdminSamples.applications
+                    BaseApplicationList(
+                        applications = rows.drop(offset).take(limit),
+                        modifier = modifier,
+                        totalResults = rows.size,
+                        isLoading = loading,
+                        error = error,
+                        limit = limit,
+                        offset = offset,
+                        onPageChange = { offset = it },
+                        onSelect = if (selectable) ({ select(it.id) {} }) else null,
+                        selectedApplicationId = selected,
+                        title = title,
+                    )
+                }
+            }
+
+            "applicationDetails" -> {
+                ApplicationDetailsPreview(live, props, error, loading, onTap)
+            }
+
+            "applicationCreate" -> {
+                val onCancel: (() -> Unit)? = if (props.flag("cancellable")) onTap else null
+                if (live) {
+                    ApplicationCreate(
+                        modifier = modifier,
+                        ouId = props.text("ouId").ifBlank { null },
+                        onCreated = { application ->
+                            ManagementFixtures.applicationId = application.id
+                            EventLog.ok("admin:application:created", "${application.name} (${application.id})", source = "explorer")
+                            onTap()
+                        },
+                        onCancel = onCancel,
+                        title = title,
+                        description = description,
+                    )
+                } else {
+                    var secret by remember { mutableStateOf<String?>(null) }
+                    BaseApplicationCreate(
+                        onSubmit = { submission ->
+                            EventLog.info(
+                                "admin:applicationCreate:submit",
+                                "${submission.name} grants=${submission.grantTypes.joinToString()}",
+                                source = "explorer",
+                            )
+                            if (!submission.publicClient) secret = AdminSamples.SAMPLE_SECRET
+                            onTap()
+                        },
+                        modifier = modifier,
+                        error = error,
+                        isSubmitting = props.flag("isSubmitting"),
+                        clientSecret = secret,
+                        onSecretDismiss = { secret = null },
+                        onCancel = onCancel,
+                        title = title,
+                        description = description,
+                    )
+                }
+            }
         }
     }
+}
+
+/** The application details story: live against the server, or the Base variant with a sample secret. */
+@Composable
+private fun ApplicationDetailsPreview(
+    live: Boolean,
+    props: Map<String, Any>,
+    error: String?,
+    loading: Boolean,
+    onTap: () -> Unit,
+) {
+    val modifier = Modifier.fillMaxWidth()
+    val deletable = props.flag("deletable")
+    val editable = props.flag("editable")
+    val regenerable = props.flag("secretRegenerable")
+    if (live) {
+        IdRequired(props.resourceId("applicationId", ManagementFixtures.applicationId), "application") { id ->
+            ApplicationDetails(
+                applicationId = id,
+                modifier = modifier,
+                deletable = deletable,
+                editable = editable,
+                secretRegenerable = regenerable,
+                onDeleted = {
+                    EventLog.ok("admin:application:deleted", id, source = "explorer")
+                    ManagementFixtures.applicationId = ""
+                },
+            )
+        }
+        return
+    }
+    var application by remember { mutableStateOf(AdminSamples.application) }
+    var secret by remember { mutableStateOf<String?>(null) }
+    BaseApplicationDetails(
+        application = application,
+        modifier = modifier,
+        error = error,
+        isLoading = loading,
+        clientSecret = secret,
+        onSecretDismiss = { secret = null },
+        onDelete =
+            if (deletable) {
+                {
+                    EventLog.info("admin:applicationDetails:delete", application.id, source = "explorer")
+                    onTap()
+                }
+            } else {
+                null
+            },
+        onUpdate =
+            if (editable) {
+                { edit ->
+                    application = application.copy(name = edit.name, description = edit.description, url = edit.url)
+                    EventLog.info("admin:applicationDetails:update", edit.name, source = "explorer")
+                    onTap()
+                }
+            } else {
+                null
+            },
+        onRegenerateSecret =
+            if (regenerable) {
+                {
+                    secret = AdminSamples.SAMPLE_SECRET
+                    EventLog.info("admin:applicationDetails:regenerateSecret", application.id, source = "explorer")
+                    onTap()
+                }
+            } else {
+                null
+            },
+    )
 }
 
 /** Live stories call the management API, which the server rejects without a session. */

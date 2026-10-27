@@ -159,8 +159,8 @@ class GroupsAndRolesApiTest {
             assertEquals(listOf("read"), role.permissions.single().permissions)
             assertEquals(
                 listOf(
-                    "GET $baseUrl/roles?limit=2",
-                    "GET $baseUrl/roles/r-1",
+                    "GET $baseUrl/roles?limit=2&include=display",
+                    "GET $baseUrl/roles/r-1?include=display",
                     "POST $baseUrl/roles",
                     "PUT $baseUrl/roles/r-1",
                     "DELETE $baseUrl/roles/r-1",
@@ -215,7 +215,7 @@ class GroupsAndRolesApiTest {
             assertEquals("Admins", groups.groups.single().name)
             assertEquals("customer", types.types.single().handle)
             assertEquals(
-                listOf("$baseUrl/users/u-1/groups?limit=100", "$baseUrl/user-types?offset=0"),
+                listOf("$baseUrl/users/u-1/groups?limit=100", "$baseUrl/user-types?offset=0&include=display"),
                 fetcher.requests.map { it.url },
             )
         }
@@ -241,7 +241,7 @@ class GroupsAndRolesApiTest {
                 listOf(
                     "$baseUrl/agents/ag-1/groups",
                     "$baseUrl/agents/ag-1/roles?limit=10&offset=0",
-                    "$baseUrl/agent-types?limit=100",
+                    "$baseUrl/agent-types?limit=100&include=display",
                 ),
                 fetcher.requests.map { it.url },
             )
@@ -280,8 +280,8 @@ class GroupsAndRolesApiTest {
                     "https://rs.example.com/v2/groups/g%201/members/remove",
                     "https://rs.example.com/v2/roles/r-1/assignments/add",
                     "https://rs.example.com/v2/agents/ag-1/roles",
-                    "https://rs.example.com/v2/agent-kinds",
-                    "https://rs.example.com/v2/user-kinds",
+                    "https://rs.example.com/v2/agent-kinds?include=display",
+                    "https://rs.example.com/v2/user-kinds?include=display",
                 ),
                 fetcher.requests.map { it.url },
             )

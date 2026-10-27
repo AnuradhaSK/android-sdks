@@ -4,6 +4,7 @@
 package dev.thunderid.android.http
 
 import dev.thunderid.android.IAMException
+import dev.thunderid.android.ServerError
 import dev.thunderid.android.ThunderIDErrorCode
 import dev.thunderid.android.ThunderIDFetcher
 import dev.thunderid.android.ThunderIDHttpRequest
@@ -195,40 +196,45 @@ internal class HttpClient(
 
     private fun handleResponse(response: ThunderIDHttpResponse): String {
         val statusCode = response.statusCode
-        return when (statusCode) {
-            in 200..299 -> {
-                response.body
-            }
+        if (statusCode in 200..299) return response.body
+        // The server's error envelope, when the body is one, rides on every error so a caller can map the
+        // server's own code. The SDK's codes below stay what they were.
+        val serverError = ServerError.parse(response.body)
+        val (code, message) =
+            when (statusCode) {
+                400 -> {
+                    val msg =
+                        serverError?.message?.defaultValue
+                            ?: runCatching { JSONObject(response.body).optString("message", "Bad request") }
+                                .getOrDefault("Bad request")
+                    ThunderIDErrorCode.INVALID_INPUT to msg
+                }
 
-            400 -> {
-                val msg = runCatching { JSONObject(response.body).optString("message", "Bad request") }.getOrDefault("Bad request")
-                throw IAMException(ThunderIDErrorCode.INVALID_INPUT, msg)
-            }
+                401 -> {
+                    ThunderIDErrorCode.AUTHENTICATION_FAILED to "Unauthorized"
+                }
 
-            401 -> {
-                throw IAMException(ThunderIDErrorCode.AUTHENTICATION_FAILED, "Unauthorized")
-            }
+                403 -> {
+                    ThunderIDErrorCode.FORBIDDEN to "Forbidden"
+                }
 
-            403 -> {
-                throw IAMException(ThunderIDErrorCode.FORBIDDEN, "Forbidden")
-            }
+                404 -> {
+                    ThunderIDErrorCode.NOT_FOUND to "Not found"
+                }
 
-            404 -> {
-                throw IAMException(ThunderIDErrorCode.NOT_FOUND, "Not found")
-            }
+                409 -> {
+                    ThunderIDErrorCode.USER_ALREADY_EXISTS to "Conflict"
+                }
 
-            409 -> {
-                throw IAMException(ThunderIDErrorCode.USER_ALREADY_EXISTS, "Conflict")
-            }
+                in 500..599 -> {
+                    ThunderIDErrorCode.SERVER_ERROR to "Server error: $statusCode"
+                }
 
-            in 500..599 -> {
-                throw IAMException(ThunderIDErrorCode.SERVER_ERROR, "Server error: $statusCode")
+                else -> {
+                    ThunderIDErrorCode.UNKNOWN_ERROR to "Unexpected status: $statusCode"
+                }
             }
-
-            else -> {
-                throw IAMException(ThunderIDErrorCode.UNKNOWN_ERROR, "Unexpected status: $statusCode")
-            }
-        }
+        throw IAMException(code, message, serverError = serverError)
     }
 
     @PublishedApi

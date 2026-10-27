@@ -22,7 +22,9 @@ import dev.thunderid.android.FlowComponent
 import dev.thunderid.android.FlowStatus
 import dev.thunderid.android.ThunderIDHttpRequest
 import dev.thunderid.android.auth.FederatedAuthSession
+import dev.thunderid.android.management.AdministrationFlowConfigKey
 import dev.thunderid.android.management.GroupMemberType
+import dev.thunderid.android.management.NotificationChannel
 import dev.thunderid.android.management.RoleAssigneeType
 import dev.thunderid.android.management.getTokenPermissions
 import dev.thunderid.android.management.hasPermission
@@ -77,11 +79,33 @@ val CheckDefs =
         CheckDef("roles", "Management", "Roles", "client.roles.list() · get()"),
         CheckDef("roleAssignments", "Management", "Role assignments", "client.roles.listAssignments()"),
         CheckDef("userGroups", "Management", "User groups", "client.users.listGroups()"),
-        CheckDef("userTypes", "Management", "User types", "client.users.listTypes()"),
-        CheckDef("agentTypes", "Management", "Agent types", "client.agents.listTypes()"),
+        CheckDef("userTypes", "Management", "User types", "client.userTypes.list() · get()"),
+        CheckDef("agentTypes", "Management", "Agent types", "client.agentTypes.list() · get()"),
+        CheckDef("userUsages", "Management", "User usages", "client.users.getUsages()"),
+        CheckDef("administration", "Management", "Administration flows", "client.administration.resolveFlows()"),
         CheckDef("agentGroups", "Management", "Agent groups", "client.agents.listGroups()"),
         CheckDef("agentRoles", "Management", "Agent roles", "client.agents.listRoles()"),
         CheckDef("permissions", "Management", "Permission checks", "getGrantedPermissions() · hasPermission()"),
+        CheckDef(
+            "organizationUnits",
+            "Management",
+            "Organization units",
+            "client.organizationUnits.list() · getByPath() · listUsers()",
+        ),
+        CheckDef("resourceServers", "Management", "Resource servers", "client.resourceServers.list() · listResources() · listActions()"),
+        CheckDef("lifecycle", "Management", "Account lifecycle flows", "client.administration.resolveFlows() for suspend/unlock"),
+        CheckDef(
+            "platform",
+            "Management",
+            "Connections, flows, design, translations",
+            "client.connections · flows · notificationTemplates · design · translations",
+        ),
+        CheckDef(
+            "operations",
+            "Management",
+            "Server configuration and gateways",
+            "client.serverConfig · gateways · variables · secrets · configurationVersions",
+        ),
         CheckDef("theme", "UI", "Theming and dark mode", "MaterialTheme · Material 3"),
         CheckDef("i18n", "UI", "Translations", "ThunderIDI18n"),
     )
@@ -221,9 +245,16 @@ class ChecksController(
             "userGroups" -> management(state) { userGroups(state) }
             "userTypes" -> management(state) { userTypes(state) }
             "agentTypes" -> management(state) { agentTypes(state) }
+            "userUsages" -> management(state) { userUsages(state) }
+            "administration" -> management(state) { administration(state) }
             "agentGroups" -> management(state) { agentGroups(state) }
             "agentRoles" -> management(state) { agentRoles(state) }
             "permissions" -> permissions(state)
+            "organizationUnits" -> management(state) { organizationUnits(state) }
+            "resourceServers" -> management(state) { resourceServers(state) }
+            "lifecycle" -> management(state) { lifecycle(state) }
+            "platform" -> management(state) { platform(state) }
+            "operations" -> management(state) { operations(state) }
             "theme" -> theme(scheme)
             "i18n" -> translations()
             else -> fail("Unknown check")
@@ -520,13 +551,115 @@ class ChecksController(
     }
 
     private suspend fun userTypes(state: ThunderIDState): CheckResult {
-        val page = state.client.users.listTypes(limit = 10)
-        return pass("${page.totalResults} user types${namesSuffix(page.types.map { it.handle })}")
+        val page = state.client.userTypes.list(limit = 10)
+        val first = page.types.firstOrNull() ?: return pass("0 user types")
+        val details = state.client.userTypes.get(first.id)
+        return pass(
+            "${page.totalResults} user types${namesSuffix(page.types.map { it.handle })}; " +
+                "${details.handle} has ${details.schema.size} attributes",
+        )
     }
 
     private suspend fun agentTypes(state: ThunderIDState): CheckResult {
-        val page = state.client.agents.listTypes(limit = 10)
-        return pass("${page.totalResults} agent types${namesSuffix(page.types.map { it.handle })}")
+        val page = state.client.agentTypes.list(limit = 10)
+        val first = page.types.firstOrNull() ?: return pass("0 agent types")
+        val details = state.client.agentTypes.get(first.id)
+        return pass(
+            "${page.totalResults} agent types${namesSuffix(page.types.map { it.handle })}; " +
+                "${details.handle} has ${details.schema.size} attributes",
+        )
+    }
+
+    private suspend fun userUsages(state: ThunderIDState): CheckResult {
+        // The signed-in user's sub is its user ID in ThunderID.
+        val id = state.user?.sub ?: return fail("The signed-in user has no sub claim")
+        val usages = state.client.users.getUsages(id)
+        val byType = usages.summary?.entries?.joinToString(", ") { "${it.value} ${it.key}" } ?: "unknown"
+        return pass("Signed-in user is referenced by ${usages.totalResults ?: "an unknown number of"} resources ($byType)")
+    }
+
+    private suspend fun administration(state: ThunderIDState): CheckResult {
+        // Read-only: resolves which operations the server runs through a flow, without running any.
+        val keys =
+            listOf(
+                AdministrationFlowConfigKey.USER_DELETION,
+                AdministrationFlowConfigKey.GROUP_DELETION,
+                AdministrationFlowConfigKey.GROUP_MEMBERSHIP_REMOVAL,
+                AdministrationFlowConfigKey.ROLE_DELETION,
+                AdministrationFlowConfigKey.ROLE_ASSIGNMENT_REMOVAL,
+                AdministrationFlowConfigKey.ROLE_PERMISSION_REMOVAL,
+                AdministrationFlowConfigKey.APPLICATION_DELETION,
+                AdministrationFlowConfigKey.SECRET_REGENERATION,
+            )
+        val flows = state.client.administration.resolveFlows(keys)
+        return pass("${flows.size} of ${keys.size} operations run through a flow${namesSuffix(flows.keys.toList())}")
+    }
+
+    private suspend fun organizationUnits(state: ThunderIDState): CheckResult {
+        val page = state.client.organizationUnits.list(limit = 5)
+        val first = page.organizationUnits.firstOrNull() ?: return pass("0 organization units")
+        val byPath = state.client.organizationUnits.getByPath(first.handle)
+        val users = state.client.organizationUnits.listUsersByPath(first.handle, limit = 5)
+        return pass(
+            "${page.totalResults} root organization units${namesSuffix(page.organizationUnits.map { it.handle })}; " +
+                "tree/${first.handle} is ${byPath.name} with ${users.totalResults} users",
+        )
+    }
+
+    private suspend fun resourceServers(state: ThunderIDState): CheckResult {
+        val page = state.client.resourceServers.list(limit = 5)
+        val first = page.resourceServers.firstOrNull() ?: return pass("0 resource servers")
+        val resources = state.client.resourceServers.listResources(first.id, limit = 5)
+        val actions = state.client.resourceServers.listActions(first.id, limit = 5)
+        return pass(
+            "${page.totalResults} resource servers${namesSuffix(page.resourceServers.map { it.name })}; " +
+                "${first.name} has ${resources.totalResults} top-level resources and ${actions.totalResults} actions",
+        )
+    }
+
+    private suspend fun lifecycle(state: ThunderIDState): CheckResult {
+        // Read-only: the lifecycle operations are flow-only, so this reports which of them can run.
+        val keys =
+            listOf(
+                AdministrationFlowConfigKey.USER_SUSPEND,
+                AdministrationFlowConfigKey.USER_UNSUSPEND,
+                AdministrationFlowConfigKey.USER_UNLOCK,
+                AdministrationFlowConfigKey.AGENT_SUSPEND,
+                AdministrationFlowConfigKey.AGENT_UNSUSPEND,
+                AdministrationFlowConfigKey.AGENT_UNLOCK,
+                AdministrationFlowConfigKey.APPLICATION_SUSPEND,
+                AdministrationFlowConfigKey.APPLICATION_UNSUSPEND,
+                AdministrationFlowConfigKey.ACTION_DELETION,
+            )
+        val flows = state.client.administration.resolveFlows(keys)
+        return pass("${flows.size} of ${keys.size} lifecycle operations have a flow${namesSuffix(flows.keys.toList())}")
+    }
+
+    private suspend fun platform(state: ThunderIDState): CheckResult {
+        val client = state.client
+        val connections = client.connections.list(limit = 5)
+        val flows = client.flows.list(limit = 5)
+        val templates = client.notificationTemplates.list(NotificationChannel.EMAIL)
+        val themes = client.design.listThemes(limit = 5)
+        val languages = client.translations.getLanguages()
+        return pass(
+            "${connections.totalResults} connections, ${flows.totalResults} flows, " +
+                "${templates.templates.size} email templates, ${themes.totalResults} themes, " +
+                "languages${namesSuffix(languages.languages)}",
+        )
+    }
+
+    private suspend fun operations(state: ThunderIDState): CheckResult {
+        val client = state.client
+        val sections = client.serverConfig.list()
+        val gateways = client.gateways.list()
+        val variables = client.variables.list(limit = 5)
+        val secrets = client.secrets.list(limit = 5)
+        val versions = client.configurationVersions.list()
+        return pass(
+            "${sections.size} config sections, ${gateways.size} gateways, ${variables.totalResults} variables, " +
+                "${secrets.totalResults} secrets, ${versions.size} configuration versions",
+        )
     }
 
     private suspend fun firstAgentId(state: ThunderIDState): String? =

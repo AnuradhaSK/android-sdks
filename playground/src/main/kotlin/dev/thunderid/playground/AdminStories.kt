@@ -286,4 +286,54 @@ val AdminComponentSpecs: List<ComponentSpec> =
             },
         ),
         createSpec("agentCreate", "AgentCreate", "agent", options = "agentTypes"),
+        listSpec("applicationList", "ApplicationList", "applications", "selectedApplicationId"),
+        ComponentSpec(
+            id = "applicationDetails",
+            group = "Admin",
+            name = "ApplicationDetails",
+            controls =
+                listOf(
+                    Control.Text("applicationId"),
+                    Control.Bool("editable"),
+                    Control.Bool("deletable"),
+                    Control.Bool("secretRegenerable"),
+                    Control.Bool("isLoading"),
+                    Control.Text("error"),
+                ),
+            defaults =
+                mapOf(
+                    "applicationId" to "",
+                    "editable" to true,
+                    "deletable" to true,
+                    "secretRegenerable" to true,
+                    "isLoading" to false,
+                    "error" to "",
+                ),
+            stories = stateStories(),
+            code = { story, props ->
+                val args = mutableListOf<Pair<String, String>>()
+                if (story == "live") {
+                    val id = props.resourceId("applicationId", ManagementFixtures.applicationId).ifBlank { "<applicationId>" }
+                    args += "applicationId" to quote(id)
+                    if (props.flag("editable")) args += "editable" to "true"
+                    if (props.flag("secretRegenerable")) args += "secretRegenerable" to "true"
+                    if (props.flag("deletable")) {
+                        args += "deletable" to "true"
+                        args += "onDeleted" to "{ /* navigate back */ }"
+                    }
+                } else {
+                    args += "application" to "application"
+                    if (props.flag("editable")) args += "onUpdate" to "{ edit -> /* save */ }"
+                    if (props.flag("secretRegenerable")) {
+                        args += "clientSecret" to "secret"
+                        args += "onSecretDismiss" to "{ secret = null }"
+                        args += "onRegenerateSecret" to "{ /* regenerate, then show the secret once */ }"
+                    }
+                    if (props.flag("deletable")) args += "onDelete" to "{ /* delete */ }"
+                    args.state(props)
+                }
+                call(if (story == "live") "ApplicationDetails" else "BaseApplicationDetails", args)
+            },
+        ),
+        createSpec("applicationCreate", "ApplicationCreate", "application"),
     )

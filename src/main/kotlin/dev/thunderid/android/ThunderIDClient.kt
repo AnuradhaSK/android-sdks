@@ -9,12 +9,28 @@ import dev.thunderid.android.backend.BackendClient
 import dev.thunderid.android.backend.BackendSessionStore
 import dev.thunderid.android.backend.resolveBackendEndpoints
 import dev.thunderid.android.http.HttpClient
+import dev.thunderid.android.management.AdministrationClient
+import dev.thunderid.android.management.AgentTypesClient
 import dev.thunderid.android.management.AgentsClient
 import dev.thunderid.android.management.ApplicationsClient
+import dev.thunderid.android.management.ConfigurationClient
+import dev.thunderid.android.management.ConfigurationVersionsClient
+import dev.thunderid.android.management.ConnectionsClient
+import dev.thunderid.android.management.DesignClient
+import dev.thunderid.android.management.FlowsClient
+import dev.thunderid.android.management.GatewaysClient
 import dev.thunderid.android.management.GroupsClient
 import dev.thunderid.android.management.ManagementTransport
+import dev.thunderid.android.management.NotificationTemplatesClient
+import dev.thunderid.android.management.OrganizationUnitsClient
+import dev.thunderid.android.management.ResourceServersClient
 import dev.thunderid.android.management.RolesClient
+import dev.thunderid.android.management.SecretsClient
+import dev.thunderid.android.management.ServerConfigClient
+import dev.thunderid.android.management.TranslationsClient
+import dev.thunderid.android.management.UserTypesClient
 import dev.thunderid.android.management.UsersClient
+import dev.thunderid.android.management.VariablesClient
 import dev.thunderid.android.management.getTokenPermissions
 import dev.thunderid.android.token.JWKSCache
 import dev.thunderid.android.token.TokenRefresher
@@ -143,6 +159,77 @@ class ThunderIDClient internal constructor(
     val roles: RolesClient
         get() = RolesClient(managementTransport("roles") { it.roles })
 
+    /** User type management operations. Throws until [initialize] has run. */
+    val userTypes: UserTypesClient
+        get() = UserTypesClient(managementTransport("user-types") { it.userTypes })
+
+    /** Agent type management operations. Throws until [initialize] has run. */
+    val agentTypes: AgentTypesClient
+        get() = AgentTypesClient(managementTransport("agent-types") { it.agentTypes })
+
+    /** Organization unit management operations. Throws until [initialize] has run. */
+    val organizationUnits: OrganizationUnitsClient
+        get() = OrganizationUnitsClient(managementTransport("organization-units") { it.organizationUnits })
+
+    /** Resource server, resource and action management operations. Throws until [initialize] has run. */
+    val resourceServers: ResourceServersClient
+        get() = ResourceServersClient(managementTransport("resource-servers") { it.resourceServers })
+
+    /** Connection management operations. Throws until [initialize] has run. */
+    val connections: ConnectionsClient
+        get() = ConnectionsClient(managementTransport("connections") { it.connections })
+
+    /** Flow definition management operations (not flow execution). Throws until [initialize] has run. */
+    val flows: FlowsClient
+        get() = FlowsClient(managementTransport("flows") { it.flows })
+
+    /** Notification template management operations. Throws until [initialize] has run. */
+    val notificationTemplates: NotificationTemplatesClient
+        get() = NotificationTemplatesClient(managementTransport("notification-templates") { it.notificationTemplates })
+
+    /** Theme and layout management operations. Throws until [initialize] has run. */
+    val design: DesignClient
+        get() = DesignClient(managementTransport("design") { it.design })
+
+    /** Translation management operations, on the `i18n` collection. Throws until [initialize] has run. */
+    val translations: TranslationsClient
+        get() = TranslationsClient(managementTransport("i18n") { it.i18n })
+
+    /** Server configuration operations. Throws until [initialize] has run. */
+    val serverConfig: ServerConfigClient
+        get() = ServerConfigClient(managementTransport("server-config") { it.serverConfig })
+
+    /** Gateway management operations. Throws until [initialize] has run. */
+    val gateways: GatewaysClient
+        get() = GatewaysClient(managementTransport("gateways") { it.gateways })
+
+    /** Server-level variable operations. Throws until [initialize] has run. */
+    val variables: VariablesClient
+        get() = VariablesClient(managementTransport("variables") { it.variables })
+
+    /** Server-level secret operations. A secret's value is write-only. Throws until [initialize] has run. */
+    val secrets: SecretsClient
+        get() = SecretsClient(managementTransport("secrets") { it.secrets })
+
+    /** Configuration version operations. Throws until [initialize] has run. */
+    val configurationVersions: ConfigurationVersionsClient
+        get() = ConfigurationVersionsClient(managementTransport("configuration-versions") { it.configurationVersions })
+
+    /** Configuration import and export. Throws until [initialize] has run. */
+    val configuration: ConfigurationClient
+        get() =
+            ConfigurationClient(
+                importTransport = managementTransport("import") { it.import },
+                exportTransport = managementTransport("export") { it.export },
+            )
+
+    /**
+     * The administration flows the server configures for operations that change state. They always run
+     * against `baseUrl`. Throws until [initialize] has run.
+     */
+    val administration: AdministrationClient
+        get() = AdministrationClient(managementTransport("flows") { null })
+
     /**
      * Returns the permissions the signed-in user's access token carries, read from its `scopes` or `scope`
      * claim. Returns an empty list when nobody is signed in or the token is not a JWT. Test one against a
@@ -160,7 +247,12 @@ class ThunderIDClient internal constructor(
     ): ManagementTransport {
         val cfg = config ?: throw IAMException(ThunderIDErrorCode.SDK_NOT_INITIALIZED, "Call initialize() before using the SDK")
         val http = httpClient ?: throw IAMException(ThunderIDErrorCode.SDK_NOT_INITIALIZED, "Call initialize() before using the SDK")
-        return ManagementTransport(http, override(cfg.endpoints) ?: "${cfg.baseUrl}/$collection", cfg.http.fetcher)
+        return ManagementTransport(
+            http,
+            override(cfg.endpoints) ?: "${cfg.baseUrl}/$collection",
+            cfg.http.fetcher,
+            cfg.baseUrl,
+        )
     }
 
     // MARK: - Authentication

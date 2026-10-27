@@ -257,7 +257,8 @@ internal fun AdminChipList(
 
 /**
  * A destructive action that asks for confirmation before it runs. The first press opens a dialog showing
- * [confirmText]; only its confirm button calls [onConfirm].
+ * [confirmText]; only its confirm button calls [onConfirm]. [action] names the button in its test tags, which
+ * are `<block>-<action>`, `<block>-<action>-confirm` and `<block>-<action>-cancel`.
  */
 @Composable
 internal fun AdminConfirmButton(
@@ -267,6 +268,7 @@ internal fun AdminConfirmButton(
     onConfirm: () -> Unit,
     isLoading: Boolean = false,
     enabled: Boolean = true,
+    action: String = "delete",
 ) {
     val i18n = LocalThunderID.current.i18n
     var isConfirming by remember { mutableStateOf(false) }
@@ -274,7 +276,7 @@ internal fun AdminConfirmButton(
         onClick = { isConfirming = true },
         enabled = enabled && !isLoading,
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        modifier = Modifier.testTag(adminTag(block, "delete")),
+        modifier = Modifier.testTag(adminTag(block, action)),
     ) {
         if (isLoading) {
             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -297,13 +299,13 @@ internal fun AdminConfirmButton(
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError,
                         ),
-                    modifier = Modifier.testTag(adminTag(block, "delete", "confirm")),
+                    modifier = Modifier.testTag(adminTag(block, action, "confirm")),
                 ) { Text(i18n.resolve("admin.common.actions.confirm")) }
             },
             dismissButton = {
                 TextButton(
                     onClick = { isConfirming = false },
-                    modifier = Modifier.testTag(adminTag(block, "delete", "cancel")),
+                    modifier = Modifier.testTag(adminTag(block, action, "cancel")),
                 ) { Text(i18n.resolve("admin.common.actions.cancel")) }
             },
         )

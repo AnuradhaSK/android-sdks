@@ -3,6 +3,8 @@
 
 package dev.thunderid.android.management
 
+import com.google.gson.annotations.SerializedName
+
 /**
  * A user record managed through the ThunderID management API.
  *
@@ -16,6 +18,10 @@ data class ManagedUser(
     val attributes: Map<String, Any?>? = null,
     val display: String? = null,
     val isReadOnly: Boolean? = null,
+    /** Whether the listed organization unit owns the user rather than having it shared in. Lists only. */
+    val isOwned: Boolean? = null,
+    val status: AccessStatus? = null,
+    val lastLoginAt: String? = null,
 )
 
 /** A pagination link returned alongside a list response. */
@@ -41,12 +47,56 @@ data class CreateManagedUserRequest(
     val attributes: Map<String, Any?>? = null,
 )
 
+/** The payload used to create a user in the organization unit a handle path names. */
+data class CreateUserByPathRequest(
+    val type: String,
+    val attributes: Map<String, Any?>? = null,
+)
+
 /** The payload used to update a user. */
 data class UpdateManagedUserRequest(
     val ouId: String? = null,
     val type: String? = null,
     val groups: List<String>? = null,
     val attributes: Map<String, Any?>? = null,
+)
+
+/** What happens to a resource that references a user when the user is deleted. [value] is the wire value. */
+enum class UserUsageBehavior(
+    val value: String,
+) {
+    @SerializedName("fallback")
+    FALLBACK("fallback"),
+
+    @SerializedName("cascade")
+    CASCADE("cascade"),
+
+    @SerializedName("restrict")
+    RESTRICT("restrict"),
+}
+
+/** A resource that references a user, such as an agent that names the user as its owner. */
+data class UserUsage(
+    val id: String,
+    val resourceType: String,
+    val displayName: String,
+    val behaviorOnDelete: UserUsageBehavior,
+)
+
+/**
+ * The resources that reference a user. [totalResults] and [summary] are `null` when the server could not
+ * tell; `0` means there are none. [summary] counts the usages of each resource type, such as `agent`.
+ */
+data class UserUsagesResponse(
+    val count: Int,
+    val usages: List<UserUsage>,
+    val totalResults: Int? = null,
+    val summary: Map<String, Int>? = null,
+)
+
+/** New values for some of a user's credential attributes, keyed by attribute name. */
+data class UpdateUserCredentialsRequest(
+    val credentials: Map<String, String>,
 )
 
 /** Inbound authentication configuration of an agent. [type] is currently always `oauth2`. */
@@ -84,6 +134,8 @@ data class Agent(
     val assertion: TokenConfig? = null,
     val loginConsent: AgentLoginConsentConfig? = null,
     val isReadOnly: Boolean? = null,
+    val status: AccessStatus? = null,
+    val lastLoginAt: String? = null,
 )
 
 /** The summary of an agent returned in list responses. */
@@ -97,6 +149,7 @@ data class BasicAgent(
     val logoUrl: String? = null,
     val clientId: String? = null,
     val isReadOnly: Boolean? = null,
+    val status: AccessStatus? = null,
 )
 
 /** A page of agents. */
@@ -134,6 +187,19 @@ data class UpdateAgentRequest(
     val authFlowId: String? = null,
     val registrationFlowId: String? = null,
     val isRegistrationFlowEnabled: Boolean? = null,
+    /**
+     * Whether the agent acts on behalf of a signed-in user. The server does not store it, so a full update
+     * sends it for the agent to be held to the delegated grant rules.
+     */
+    val delegated: Boolean? = null,
+    val assertion: TokenConfig? = null,
+    val loginConsent: AgentLoginConsentConfig? = null,
+)
+
+/** The secret `AgentsClient.regenerateSecret` saved on the agent's OAuth client, and the updated agent. */
+data class RegenerateAgentSecretResult(
+    val agent: Agent,
+    val clientSecret: String,
 )
 
 /**
