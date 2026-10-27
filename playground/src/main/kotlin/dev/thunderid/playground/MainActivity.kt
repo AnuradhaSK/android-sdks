@@ -31,6 +31,43 @@ object PlaygroundSettings {
 
     val hostLabel: String
         get() = baseUrl.substringAfter("://").ifBlank { "no server configured" }
+
+    /** Per-collection keys from config.properties. Blank means "not overridden". */
+    val endpointKeys: Map<String, String> =
+        mapOf(
+            "THUNDERID_ENDPOINT_APPLICATIONS" to BuildConfig.THUNDERID_ENDPOINT_APPLICATIONS,
+            "THUNDERID_ENDPOINT_USERS" to BuildConfig.THUNDERID_ENDPOINT_USERS,
+            "THUNDERID_ENDPOINT_USER_TYPES" to BuildConfig.THUNDERID_ENDPOINT_USER_TYPES,
+            "THUNDERID_ENDPOINT_AGENTS" to BuildConfig.THUNDERID_ENDPOINT_AGENTS,
+            "THUNDERID_ENDPOINT_AGENT_TYPES" to BuildConfig.THUNDERID_ENDPOINT_AGENT_TYPES,
+            "THUNDERID_ENDPOINT_GROUPS" to BuildConfig.THUNDERID_ENDPOINT_GROUPS,
+            "THUNDERID_ENDPOINT_ROLES" to BuildConfig.THUNDERID_ENDPOINT_ROLES,
+        )
+
+    /** Where a collection's URL comes from: its own key, or baseUrl. */
+    fun endpointSource(collection: ManagementCollection): String =
+        when {
+            endpointKeys[collection.configKey].orEmpty().isNotBlank() -> collection.configKey
+            else -> "baseUrl"
+        }
+
+    private fun endpoint(collection: String): String? {
+        val match = ManagementCollections.first { it.name == collection }
+        return endpointKeys[match.configKey].orEmpty().ifBlank { null }
+    }
+
+    /** The ThunderIDEndpoints handed to the SDK. A null entry lets the SDK fall back to baseUrl. */
+    val endpoints: ThunderIDEndpoints
+        get() =
+            ThunderIDEndpoints(
+                applications = endpoint("applications"),
+                users = endpoint("users"),
+                userTypes = endpoint("userTypes"),
+                agents = endpoint("agents"),
+                agentTypes = endpoint("agentTypes"),
+                groups = endpoint("groups"),
+                roles = endpoint("roles"),
+            )
 }
 
 /** Translations the playground registers, so the translations check and LanguageSwitcher have a second locale. */
@@ -68,7 +105,7 @@ class MainActivity : ComponentActivity() {
                 afterSignOutUrl = PlaygroundSettings.afterSignOutUrl,
                 scopes = PlaygroundSettings.scopes,
                 endpoints =
-                    ThunderIDEndpoints(
+                    PlaygroundSettings.endpoints.copy(
                         backend =
                             PlaygroundSettings.backendUrl
                                 .takeIf { it.isNotBlank() }

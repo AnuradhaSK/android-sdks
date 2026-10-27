@@ -13,7 +13,7 @@ import kotlinx.coroutines.CompletableDeferred
  * only opens a Custom Tab and waits for the app's registered callback scheme to come back.
  *
  * The hosting Activity must forward its deep-link `Uri` to [onRedirect] from `onNewIntent`,
- * the same way [dev.thunderid.compose.components.flow.Callback] expects the app to hand it a
+ * the same way [dev.thunderid.compose.components.auth.Callback] expects the app to hand it a
  * deep-link URL explicitly. Call [cancelIfPending] from `onResume` to resolve gracefully if the
  * user dismissed the browser without completing sign-in.
  */
