@@ -12,12 +12,16 @@ import dev.thunderid.android.ThunderIDFetcher
 import dev.thunderid.android.ThunderIDHttpRequest
 import dev.thunderid.android.ThunderIDHttpResponse
 import dev.thunderid.android.management.Agent
+import dev.thunderid.android.management.Application
 import dev.thunderid.android.management.BasicAgent
+import dev.thunderid.android.management.BasicApplication
 import dev.thunderid.android.management.Group
 import dev.thunderid.android.management.GroupMember
 import dev.thunderid.android.management.GroupMemberType
+import dev.thunderid.android.management.InboundAuthConfig
 import dev.thunderid.android.management.ManagedUser
 import dev.thunderid.android.management.MembershipGroup
+import dev.thunderid.android.management.OAuth2Config
 import dev.thunderid.android.management.RoleAssigneeType
 import dev.thunderid.android.management.RoleAssignment
 import dev.thunderid.android.management.RoleResourcePermissions
@@ -92,6 +96,7 @@ object ManagementFixtures {
     var roleId by mutableStateOf("")
     var userId by mutableStateOf("")
     var agentId by mutableStateOf("")
+    var applicationId by mutableStateOf("")
 }
 
 /**
@@ -109,6 +114,7 @@ val AdminPermissions =
         "system:role:view" to "RoleList · RolePermissions · RoleAssignments",
         "system:role" to "RoleCreate · assign roles",
         "system:agent" to "AgentList · AgentDetails · AgentCreate",
+        "system" to "ApplicationList · ApplicationDetails · ApplicationCreate (no narrower permission guards applications)",
     )
 
 /** Sample data for the Base stories, which render without a server. */
@@ -217,4 +223,38 @@ object AdminSamples {
     val userTypes = listOf(AdminOption("Customer", "customer"), AdminOption("Employee", "employee"))
 
     val agentTypes = listOf(AdminOption("Assistant", "assistant"), AdminOption("Workflow", "workflow"))
+
+    val applications =
+        listOf(
+            BasicApplication(id = "app-1", name = "Customer portal", template = "react", clientId = "customer-portal"),
+            BasicApplication(id = "app-2", name = "Billing API", type = "m2m", clientId = "billing-api"),
+            BasicApplication(id = "app-3", name = "Field app", type = "mobile", clientId = "field-app"),
+        )
+
+    val application =
+        Application(
+            id = "app-1",
+            name = "Customer portal",
+            description = "Self-service portal for customers",
+            url = "https://portal.example.com",
+            template = "react",
+            ouId = "ou-root",
+            inboundAuthConfig =
+                listOf(
+                    InboundAuthConfig(
+                        config =
+                            OAuth2Config(
+                                grantTypes = listOf("authorization_code", "refresh_token"),
+                                responseTypes = listOf("code"),
+                                clientId = "customer-portal",
+                                redirectUris = listOf("https://portal.example.com/callback"),
+                                tokenEndpointAuthMethod = "client_secret_basic",
+                                publicClient = false,
+                            ),
+                    ),
+                ),
+        )
+
+    /** A sample secret for the Base stories. Never a real one. */
+    const val SAMPLE_SECRET = "sample-secret-not-real-0123456789"
 }

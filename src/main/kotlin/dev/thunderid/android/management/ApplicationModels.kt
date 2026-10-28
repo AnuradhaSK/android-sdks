@@ -73,6 +73,8 @@ data class Application(
     val isReadOnly: Boolean? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null,
+    /** `ACTIVE` or `SUSPENDED`. Applications are never locked. */
+    val status: AccessStatus? = null,
 ) {
     /** The caller-settable fields of this application. */
     fun toRequest(): ApplicationRequest =
@@ -120,6 +122,7 @@ data class BasicApplication(
     val template: String? = null,
     val isReadOnly: Boolean? = null,
     val clientId: String? = null,
+    val status: AccessStatus? = null,
 )
 
 /** A page of applications. */
@@ -238,4 +241,32 @@ data class AndroidAttestationConfig(
 data class AppleAttestationConfig(
     val teamId: String,
     val bundleId: String,
+)
+
+/**
+ * What the server read from a client ID metadata document (CIMD): the client's name and links, and the
+ * OAuth configuration it declares.
+ */
+data class CimdPreviewResponse(
+    val name: String,
+    val inboundAuthConfig: List<InboundAuthConfig>,
+    val url: String? = null,
+    val tosUri: String? = null,
+    val policyUri: String? = null,
+    val contacts: List<String>? = null,
+)
+
+/**
+ * A regenerated client secret. [application] is the updated application when the SDK saved the secret
+ * itself, and `null` when an administration flow regenerated it.
+ */
+data class RegenerateClientSecretResult(
+    val clientSecret: String,
+    val application: Application? = null,
+)
+
+/** A regenerated flow secret and the updated application. */
+data class RegenerateFlowSecretResult(
+    val application: Application,
+    val flowSecret: String,
 )

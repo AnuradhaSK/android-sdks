@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.sp
 import dev.thunderid.android.management.ManagedUser
 import dev.thunderid.android.management.resolveManagedIdentityName
 import dev.thunderid.compose.components.admin.AdminListState
+import dev.thunderid.compose.components.admin.ApplicationDetails
+import dev.thunderid.compose.components.admin.ApplicationDetailsState
+import dev.thunderid.compose.components.admin.BaseApplicationDetails
 import dev.thunderid.compose.components.admin.BaseGroupCreate
 import dev.thunderid.compose.components.admin.BaseUserDetails
 import dev.thunderid.compose.components.admin.BaseUserList
@@ -126,6 +129,35 @@ val CustomRenderSpecs: List<ComponentSpec> =
                 """.trimMargin()
             },
         ),
+        ComponentSpec(
+            id = "customApplicationDetails",
+            group = "Custom rendering",
+            name = "ApplicationDetails → Card",
+            controls = listOf(Control.Text("applicationId")),
+            defaults = mapOf("applicationId" to ""),
+            stories = CUSTOM_STORIES,
+            code = { story, props ->
+                val head =
+                    if (story == "live") {
+                        "ApplicationDetails(applicationId = ${quote(props.text("applicationId"))}, secretRegenerable = true)"
+                    } else {
+                        "BaseApplicationDetails(application = app, clientSecret = secret, onRegenerateSecret = {})"
+                    }
+                """
+                |$head { details ->
+                |    Card {
+                |        Text(details.application?.name.orEmpty(), style = MaterialTheme.typography.titleLarge)
+                |        details.oauth?.clientId?.let { Text("Client ID: ${'$'}it") }
+                |        details.clientSecret?.let { secret ->
+                |            Text("Copy it now: ${'$'}secret")
+                |            details.onSecretDismiss?.let { TextButton(onClick = it) { Text("Done") } }
+                |        }
+                |        details.onRegenerateSecret?.let { TextButton(onClick = it) { Text("New secret") } }
+                |    }
+                |}
+                """.trimMargin()
+            },
+        ),
     )
 
 /** Whether [componentId] is one of the custom rendering stories. */
@@ -170,6 +202,29 @@ fun CustomRenderPreview(
                 GroupCreate(modifier = modifier, onCreated = { onTap() }) { GroupForm(it) }
             } else {
                 BaseGroupCreate(onSubmit = { onTap() }, modifier = modifier) { GroupForm(it) }
+            }
+        }
+
+        "customApplicationDetails" -> {
+            val applicationId = props.text("applicationId")
+            if (live && applicationId.isBlank()) {
+                Text("Set applicationId to an ID from your server.", color = MaterialTheme.colorScheme.onBackground)
+            } else if (live) {
+                ApplicationDetails(applicationId = applicationId, modifier = modifier, secretRegenerable = true) {
+                    ApplicationCard(it)
+                }
+            } else {
+                var secret by remember { mutableStateOf<String?>(null) }
+                BaseApplicationDetails(
+                    application = AdminSamples.application,
+                    modifier = modifier,
+                    clientSecret = secret,
+                    onSecretDismiss = { secret = null },
+                    onRegenerateSecret = {
+                        secret = AdminSamples.SAMPLE_SECRET
+                        onTap()
+                    },
+                ) { ApplicationCard(it) }
             }
         }
 
@@ -276,6 +331,47 @@ private fun UserCard(details: UserDetailsState) {
             details.onDelete?.let { delete ->
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = delete) { Text("Delete user", color = MaterialTheme.colorScheme.error) }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The application details state drawn as a Material card. Regenerating asks for confirmation here too, since
+ * a custom render takes over the built-in confirmation.
+ */
+@Composable
+private fun ApplicationCard(details: ApplicationDetailsState) {
+    var confirming by remember { mutableStateOf(false) }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val application = details.application
+            if (application == null) {
+                if (details.isLoading) CircularProgressIndicator() else Text(details.error.orEmpty())
+                return@Column
+            }
+            Text(application.name, style = MaterialTheme.typography.titleLarge)
+            details.oauth?.clientId?.let { Text("Client ID: $it", fontSize = 14.sp) }
+            details.oauth?.redirectUris?.forEach { Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            details.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            details.clientSecret?.let { secret ->
+                Text("New secret, shown once: $secret", fontWeight = FontWeight.Medium)
+                details.onSecretDismiss?.let { dismiss -> TextButton(onClick = dismiss) { Text("I have copied it") } }
+            }
+            details.onRegenerateSecret?.let { regenerate ->
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    if (confirming) {
+                        TextButton(onClick = { confirming = false }) { Text("Cancel") }
+                        Button(onClick = {
+                            confirming = false
+                            regenerate()
+                        }) { Text("Confirm") }
+                    } else {
+                        TextButton(onClick = { confirming = true }, enabled = !details.isRegeneratingSecret) {
+                            Text("Regenerate secret")
+                        }
+                    }
                 }
             }
         }
