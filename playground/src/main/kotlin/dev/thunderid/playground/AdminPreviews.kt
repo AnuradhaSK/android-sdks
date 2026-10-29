@@ -232,7 +232,13 @@ fun AdminStoryPreview(
                 val editable = props.flag("editable")
                 if (live) {
                     IdRequired(props.resourceId("roleId", ManagementFixtures.roleId), "role") { id ->
-                        RoleAssignments(roleId = id, modifier = modifier, editable = editable, title = title)
+                        RoleAssignments(
+                            roleId = id,
+                            modifier = modifier,
+                            editable = editable,
+                            title = title,
+                            ouId = props.text("ouId").ifBlank { null },
+                        )
                     }
                 } else {
                     val assignments = remember { mutableStateListOf<RoleAssignment>().apply { addAll(AdminSamples.assignments) } }

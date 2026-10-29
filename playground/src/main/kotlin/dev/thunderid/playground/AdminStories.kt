@@ -154,26 +154,26 @@ private fun membershipSpec(
     rowsParam: String,
     addParam: String,
     removeParam: String,
+    extraControls: List<Control> = emptyList(),
 ): ComponentSpec =
     ComponentSpec(
         id = id,
         group = "Admin",
         name = name,
         controls =
-            listOf(
-                Control.Text(idKey),
-                Control.Bool("editable"),
-                Control.Text("title"),
-                Control.Bool("isLoading"),
-                Control.Text("error"),
-            ),
-        defaults = mapOf(idKey to "", "editable" to true, "title" to "", "isLoading" to false, "error" to ""),
+            listOf(Control.Text(idKey), Control.Bool("editable")) +
+                extraControls +
+                listOf(Control.Text("title"), Control.Bool("isLoading"), Control.Text("error")),
+        defaults =
+            mapOf(idKey to "", "editable" to true, "title" to "", "isLoading" to false, "error" to "") +
+                extraControls.associate { it.name to "" },
         stories = stateStories(),
         code = { story, props ->
             val args = mutableListOf<Pair<String, String>>()
             if (story == "live") {
                 args += idKey to quote(props.resourceId(idKey, discovered()).ifBlank { "<$idKey>" })
                 if (props.flag("editable")) args += "editable" to "true"
+                extraControls.forEach { args.text(props, it.name) }
             } else {
                 args += rowsParam to rowsParam
                 if (props.flag("editable")) {
@@ -222,6 +222,7 @@ val AdminComponentSpecs: List<ComponentSpec> =
             "assignments",
             "onAssign",
             "onUnassign",
+            listOf(Control.Text("ouId")),
         ),
         createSpec("roleCreate", "RoleCreate", "role"),
         listSpec("userList", "UserList", "users", "selectedUserId", listOf(Control.Text("filter"))),

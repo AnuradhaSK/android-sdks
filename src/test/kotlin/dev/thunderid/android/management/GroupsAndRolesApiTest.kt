@@ -106,6 +106,18 @@ class GroupsAndRolesApiTest {
         }
 
     @Test
+    fun `group list sends the filter`() =
+        runTest {
+            val fetcher = QueueFetcher()
+            val client = client(fetcher)
+            fetcher.respond("""{"totalResults":0,"startIndex":1,"count":0,"groups":[]}""")
+
+            client.groups.list(limit = 10, filter = "ouId eq \"ou-1\"")
+
+            assertEquals("$baseUrl/groups?limit=10&filter=ouId%20eq%20%22ou-1%22&include=display", fetcher.requests.single().url)
+        }
+
+    @Test
     fun `group members are listed, added and removed through sub-resources`() =
         runTest {
             val fetcher = QueueFetcher()
