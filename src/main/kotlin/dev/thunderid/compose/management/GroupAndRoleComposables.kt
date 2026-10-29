@@ -52,11 +52,12 @@ private fun pageKey(
 fun rememberGetGroups(
     limit: Int? = null,
     offset: Int? = null,
+    filter: String? = null,
     fetcher: ThunderIDFetcher? = null,
     enabled: Boolean = true,
 ): ResourceQueryState<GroupListResponse> =
-    rememberResourceQuery(listOf(GroupQueryKeys.GROUPS) + pageKey(limit, offset), enabled) {
-        it.groups.list(limit, offset, fetcher)
+    rememberResourceQuery(listOf(GroupQueryKeys.GROUPS, "filter=${filter.orEmpty()}") + pageKey(limit, offset), enabled) {
+        it.groups.list(limit, offset, filter, fetcher)
     }
 
 @Composable

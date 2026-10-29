@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import dev.thunderid.android.management.ManagementFilter
 import dev.thunderid.android.management.RoleAssigneeType
 import dev.thunderid.android.management.RoleAssignment
 import dev.thunderid.android.management.RoleAssignmentInput
@@ -153,6 +154,7 @@ fun BaseRoleAssignments(
  *
  * @param editable Lets the role be assigned to users, groups and agents, and be unassigned. Off by default.
  * @param filterable Shows the assignee type filter, which narrows the list on the server. On by default.
+ * @param ouId Organization unit the users, groups and agents offered for assignment are listed from.
  * @param content Renders custom UI in place of the default table and picker. See [BaseRoleAssignments].
  */
 @Composable
@@ -163,15 +165,18 @@ fun RoleAssignments(
     filterable: Boolean = true,
     title: String? = null,
     description: String? = null,
+    ouId: String? = null,
     content: (@Composable (RoleAssignmentsState) -> Unit)? = null,
 ) {
     val i18n = LocalThunderID.current.i18n
     val scope = rememberCoroutineScope()
     var typeFilter by remember(roleId) { mutableStateOf<RoleAssigneeType?>(null) }
     val assignments = rememberGetRoleAssignments(roleId, limit = 100, type = typeFilter)
-    val users = rememberGetUsers(limit = 100, enabled = editable)
-    val groups = rememberGetGroups(limit = 100, enabled = editable)
-    val agents = rememberGetAgents(limit = 100, enabled = editable)
+    // A new filter is a new query key, which starts with no data, so no candidate from the previous unit is offered.
+    val filter = roleAssignmentCandidateFilter(ouId)
+    val users = rememberGetUsers(limit = 100, filter = filter, enabled = editable)
+    val groups = rememberGetGroups(limit = 100, filter = filter, enabled = editable)
+    val agents = rememberGetAgents(limit = 100, filter = filter, enabled = editable)
     val assign = rememberAddRoleAssignments()
     val unassign = rememberRemoveRoleAssignments()
     BaseRoleAssignments(
@@ -227,3 +232,6 @@ fun RoleAssignments(
         content = content,
     )
 }
+
+/** The filter [RoleAssignments] lists its candidates with, `null` to list them from every organization unit. */
+internal fun roleAssignmentCandidateFilter(ouId: String?): String? = ouId?.let { ManagementFilter.equality("ouId", it) }

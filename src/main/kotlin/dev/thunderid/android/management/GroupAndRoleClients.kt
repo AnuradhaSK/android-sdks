@@ -15,12 +15,13 @@ class GroupsClient internal constructor(
 ) {
     private val administration = AdministrationClient(transport)
 
-    /** Returns a page of groups. */
+    /** Returns a page of groups. [filter] narrows it on the server, for example `ouId eq "<id>"`. */
     suspend fun list(
         limit: Int? = null,
         offset: Int? = null,
+        filter: String? = null,
         fetcher: ThunderIDFetcher? = null,
-    ): GroupListResponse = transport.list(page(limit, offset) + ("include" to "display"), fetcher)
+    ): GroupListResponse = transport.list(page(limit, offset) + ("filter" to filter) + ("include" to "display"), fetcher)
 
     /** Returns a single group. */
     suspend fun get(
